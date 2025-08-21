@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>ניתוח הוצאות • קטגוריות מותאמות + בחירה מרובה</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      /* Light */
+      --bg:#ffffff; --panel:#f3f4f6; --card:#ffffff; --muted:#6b7280; --text:#111827;
+      --accent:#2563eb; --accent2:#10b981; --chip:#e5e7eb; --border:rgba(0,0,0,.08);
+      --shadow:0 8px 24px rgba(0,0,0,.08); --radius:14px;
+    }
+    :root[data-theme="dark"]{
+      /* Dark */
+      --bg:#0f172a; --panel:#111827; --card:#0b1222; --muted:#94a3b8; --text:#e5e7eb;
+      --accent:#22d3ee; --accent2:#a78bfa; --chip:#1e293b; --border:rgba(255,255,255,.08);
+      --shadow:0 10px 30px rgba(0,0,0,.35); --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text)}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0));border:1px solid var(--border);
+      padding:16px 18px;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .title{font-size:clamp(20px,2.6vw,28px);font-weight:700}
+    .subtitle{color:var(--muted);font-size:14px}
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .file{background:var(--panel);border:1px dashed var(--border);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer}
+    .badge{background:linear-gradient(90deg,rgba(37,99,235,.12),rgba(16,185,129,.12));border:1px solid var(--border);
+      color:var(--text);padding:8px 12px;border-radius:999px;font-size:14px}
+    .btn{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .input{background:#fff;color:#111827;border:1px solid #d1d5db;padding:10px 12px;border-radius:10px}
+    :root[data-theme="dark"] .input{background:#0a1020;color:var(--text);border:1px solid var(--border)}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+    .panel{background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0));border:1px solid var(--border);
+      border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .panel h2{margin:0 0 8px 0;font-size:18px}
+    .hint{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .spacer{flex:1 1 auto}
+    .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+    @media (max-width:720px){.kpis{grid-template-columns:1fr}}
+    .kpi{background:var(--card);border:1px solid var(--border);padding:14px;border-radius:14px}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:22px;font-weight:700;margin-top:4px}
+    .bars{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+    .bar{display:grid;grid-template-columns:140px 1fr 100px;gap:12px;align-items:center;background:var(--card);
+      border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+    .bar .key{font-weight:600;font-size:14px}
+    .bar .track{height:12px;background:rgba(0,0,0,.08);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0}
+    .bar .val{text-align:left;color:var(--muted);font-variant-numeric:tabular-nums}
+    .category-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+    .category-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .chip{background:var(--chip);border:1px solid var(--border);padding:6px 10px;border-radius:999px;color:var(--muted);font-size:12px}
+    .items{display:flex;flex-direction:column;gap:8px}
+    .item{display:flex;gap:8px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0));
+      border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+    .item .left{display:flex;gap:8px;align-items:center;overflow:hidden}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--accent)}
+    .desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .amt{font-weight:700}
+    select{background:#fff;color:#111827;border:1px solid #d1d5db;border-radius:10px;padding:6px 8px}
+    :root[data-theme="dark"] select{background:#0a1020;color:var(--text);border:1px solid var(--border)}
+    .checkbox{transform:scale(1.1)}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title">ניתוח הוצאות • קטגוריות מותאמות + בחירה מרובה</div>
+      <div class="subtitle">העלה/י אקסל → סיווג לפי הקטגוריות שלך (או מילות מפתח) → שינוי ידני או קבוצתי</div>
+    </div>
+    <div class="controls">
+      <label class="file"> העלאת קובץ אקסל
+        <input id="upload" type="file" accept=".xlsx,.xls" style="display:none" />
+      </label>
+      <span id="filename" class="badge">לא נבחר קובץ</span>
+      <div class="spacer"></div>
+      <button id="themeBtn" class="btn" type="button">מצב: Light</button>
+    </div>
+  </header>
+
+  <section class="grid">
+    <!-- סיכום וגרף -->
+    <div class="panel">
+      <h2>סיכום כללי</h2>
+      <div class="hint">הסיכומים והגרף מתעדכנים גם בשינוי קטגוריה קבוצתי.</div>
+      <div class="kpis">
+        <div class="kpi"><div class="label">סה״כ עסקאות</div><div id="kpi-count" class="value">—</div></div>
+        <div class="kpi"><div class="label">סה״כ הוצאות</div><div id="kpi-sum" class="value">—</div></div>
+        <div class="kpi"><div class="label">קטגוריות פעילות</div><div id="kpi-active" class="value">—</div></div>
+      </div>
+      <div style="margin-top:16px;display:flex;align-items:center;gap:8px">
+        <strong>התפלגות לפי קטגוריות</strong>
+        <span class="chip">גרף עמודות</span>
+      </div>
+      <div id="bars" class="bars"></div>
+    </div>
+
+    <!-- פירוט + הוספת קטגוריה + פעולה קבוצתית -->
+    <div class="panel">
+      <div class="row">
+        <h2 style="margin:0">פירוט לפי קטגוריה</h2>
+        <div class="spacer"></div>
+        <input id="newCatInput" class="input" placeholder="שם קטגוריה חדשה (למשל: לימודים)" />
+        <button id="addCatBtn" class="btn" type="button">הוסף/י קטגוריה</button>
+      </div>
+
+      <!-- פעולה קבוצתית -->
+      <div class="row" style="margin-top:10px">
+        <select id="bulkCategory"></select>
+        <button id="bulkBtn" class="btn" type="button">שנה קטגוריה לנבחרים</button>
+        <button id="clearSelBtn" class="btn secondary" type="button">נקה סימונים</button>
+        <span class="hint" id="selCount" style="margin-inline-start:8px">0 נבחרו</span>
+      </div>
+
+      <div id="categories" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <script>
+    /* ========== קטגוריות בסיס ========== */
+    const allowedCategories = [
+      'סופר/מכולת','שכר דירה','ריביות','בילויים ואוכל בחוץ','ביטוחים',
+      'חניונים ורכב','דלק','בריאות','RISEUP','טיפוח ובגדים','אירועים ומתנות','אחר'
+    ];
+
+    /* ========== מיפוי שמות חלופיים ========== */
+    const aliasMap = new Map([
+      ['בילויים', 'בילויים ואוכל בחוץ'],
+      ['מכולת', 'סופר/מכולת'],
+      ['מזון', 'סופר/מכולת'],
+      ['דלק, חשמל וגז', 'דלק'],
+      ['מסעדות, קפה וברים', 'בילויים ואוכל בחוץ'],
+      ['ריבית', 'ריביות'],
+      ['ריביות ועמלות', 'ריביות'],
+      ['חניה', 'חניונים ורכב'],
+    ]);
+
+    /* ========== מילות מפתח לניחוש ========== */
+    const keywords = {
+      'סופר/מכולת': ['שופרסל','רמי לוי','מינימרקט מור','הצרכניה של ברוך','יינות ביתן','טיב טעם','AM:PM','YELLOW','סופר','מכולת','קואופ','ויקטורי','יוחננוף','חצי חינם'],
+      'דלק': ['פז','סונול','דלק','דלקן','תדלוק','TEN'],
+      'בילויים ואוכל בחוץ': ['ארומה','גרג','ג׳פניקה','קפה','מסעדה','בורגר','המבורגר','פיצה','בר','פאב','סושי'],
+      'טיפוח ובגדים': ['זארה','H&M','קסטרו','פוקס','אדידס','נייק','בגדים','סופר-פארם','BE','קרם','טיפוח'],
+      'ביטוחים': ['מגדל','הראל','כלל','איילון','ביטוח','סוכנות'],
+      'בריאות': ['בית מרקחת','קופת חולים','תרופה','מדיקל','רופא','בדיקה'],
+      'חניונים ורכב': ['חניון','חניה','ליסינג','שלמה סיקסט','חברת רכב','שטיפה'],
+      'שכר דירה': ['שכ״ד','שכר דירה'],
+      'ריביות': ['ריבית','עמלת ריבית','ריביות'],
+      'אירועים ומתנות': ['מתנה','אירוע','חתונה','יום הולדת','טקס'],
+      'RISEUP': ['RISEUP','רייזאפ']
+    };
+
+    /* ========== נתונים ומצב ========== */
+    let categorized = {};      // { קטגוריה: [{id, desc, amount, category}] }
+    let allItems = [];
+    let idCounter = 1;
+    const fileLabel = document.getElementById('filename');
+
+    // בחירה מרובה - מזהים ייחודיים של עסקאות שנבחרו
+    const selectedIds = new Set();
+    const selCountEl = document.getElementById('selCount');
+
+    const fmtMoney = n => (isFinite(n)? new Intl.NumberFormat('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n) : '0.00') + ' ₪';
+
+    /* ========== Theme ========== */
+    const themeBtn = document.getElementById('themeBtn');
+    const root = document.documentElement;
+    let isDark = false;
+    const applyTheme = ()=>{ root.setAttribute('data-theme', isDark ? 'dark' : ''); themeBtn.textContent = 'מצב: ' + (isDark ? 'Dark' : 'Light'); };
+    themeBtn.addEventListener('click', ()=>{ isDark = !isDark; applyTheme(); });
+    applyTheme();
+
+    /* ========== עזרי קטגוריות ========== */
+    function normalizeCategory(cat){
+      if (!cat) return '';
+      const raw = String(cat).trim();
+      if (allowedCategories.includes(raw)) return raw;
+      if (aliasMap.has(raw)) return aliasMap.get(raw);
+      for (const opt of allowedCategories){ if (raw.includes(opt) || opt.includes(raw)) return opt; }
+      return '';
+    }
+    function guessCategory(description) {
+      const d = (description || '').toString().toLowerCase();
+      for (const [cat, words] of Object.entries(keywords)) {
+        for (const w of words) { if (d.includes(w.toLowerCase())) return cat; }
+      }
+      return 'אחר';
+    }
+    function detectUserCategoryColumn(rows){
+      if (!rows.length) return null;
+      const headers = Object.keys(rows[0]);
+      const preferred = ['קטגוריה מותאמת','קטגוריה שלי','קטגוריה_שלי','MyCategory','CategoryCustom'];
+      for (const h of headers){ if (preferred.includes(h)) return h; }
+      const ignore = new Set(['שם בית העסק','תיאור','Description','קטגוריה','סכום','Amount','סכום חיוב']);
+      const candidates = headers.filter(h => !ignore.has(h));
+      let best=null,bestScore=-1;
+      for (const h of candidates){
+        const vals = rows.map(r => (r[h]||'').toString().trim()).filter(Boolean);
+        if (!vals.length) continue;
+        const matches = vals.map(v => normalizeCategory(v)).filter(Boolean).length;
+        const score = matches*2 + vals.length;
+        if (score>bestScore){ bestScore=score; best=h; }
+      }
+      return best;
+    }
+
+    /* ========== בניית תפריטים גלובליים (bulk) ========== */
+    const bulkCatSel = document.getElementById('bulkCategory');
+    function buildBulkSelectOptions(){
+      bulkCatSel.innerHTML = allowedCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    buildBulkSelectOptions();
+
+    /* ========== הוספת קטגוריה ידנית ========== */
+    const newCatInput = document.getElementById('newCatInput');
+    document.getElementById('addCatBtn').addEventListener('click', ()=>{
+      const name = (newCatInput.value || '').trim();
+      if (!name) return;
+      if (!allowedCategories.includes(name)){
+        allowedCategories.splice(allowedCategories.length-1, 0, name); // לפני "אחר"
+        if (!keywords[name]) keywords[name] = [];
+        buildBulkSelectOptions();
+        render(); // יעדכן גם את כל dropdown-ים בפריטים
+      }
+      newCatInput.value = '';
+    });
+
+    /* ========== קריאת הקובץ ========== */
+    document.getElementById('upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      fileLabel.textContent = file.name;
+
+      const fr = new FileReader();
+      fr.onload = (evt) => {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet);
+
+          categorized = {}; allItems = []; idCounter = 1; selectedIds.clear();
+
+          const userCatCol = detectUserCategoryColumn(rows);
+
+          rows.forEach(row => {
+            const desc = String(row['שם בית העסק'] || row['תיאור'] || row['Description'] || '').trim();
+            const rawAmount = row['סכום חיוב'] ?? row['סכום'] ?? row['Amount'] ?? 0;
+            const amount = Number(String(rawAmount).toString().replace(/[^\d.\-]/g, '')) || 0;
+
+            let category = '';
+            if (userCatCol){ category = normalizeCategory(row[userCatCol]); }
+            if (!category){ category = normalizeCategory(row['קטגוריה']); }
+            if (!category){ category = guessCategory(desc); }
+            if (!allowedCategories.includes(category)) category = 'אחר';
+
+            const item = { id: idCounter++, desc, amount, category };
+            if (!categorized[category]) categorized[category] = [];
+            categorized[category].push(item);
+            allItems.push(item);
+          });
+
+          render();
+        } catch (err) {
+          alert('שגיאה בקריאת הקובץ. ודאי שהגיליון הראשון מכיל כותרות כמו "שם בית העסק"/"תיאור" ו-"סכום חיוב"/"סכום".');
+          console.error(err);
+        }
+      };
+      fr.readAsArrayBuffer(file);
+    });
+
+    /* ========== שינוי קטגוריה לשורה בודדת ========== */
+    function changeCategorySingle(itemId, fromCategory, toCategory){
+      const list = categorized[fromCategory];
+      if (!list) return;
+      const idx = list.findIndex(it => it.id === itemId);
+      if (idx === -1) return;
+      const item = list[idx];
+      list.splice(idx,1);
+      item.category = toCategory;
+      if (!categorized[toCategory]) categorized[toCategory] = [];
+      categorized[toCategory].push(item);
+      render();
+    }
+
+    /* ========== פעולה קבוצתית ========== */
+    document.getElementById('bulkBtn').addEventListener('click', ()=>{
+      const targetCat = bulkCatSel.value;
+      if (!targetCat || selectedIds.size === 0) return;
+
+      // עבור כל id נבחר: מצא את הקטגוריה הנוכחית והעבר
+      for (const id of Array.from(selectedIds)){
+        // מצא את הקטגוריה הנוכחית שמכילה את הפריט
+        let fromCat = null, idx = -1;
+        for (const [cat, items] of Object.entries(categorized)){
+          idx = items.findIndex(it => it.id === id);
+          if (idx !== -1){ fromCat = cat; break; }
+        }
+        if (!fromCat) continue;
+        const item = categorized[fromCat][idx];
+        categorized[fromCat].splice(idx,1);
+        item.category = targetCat;
+        if (!categorized[targetCat]) categorized[targetCat] = [];
+        categorized[targetCat].push(item);
+      }
+      render();
+    });
+
+    document.getElementById('clearSelBtn').addEventListener('click', ()=>{
+      selectedIds.clear();
+      updateSelCount();
+      // לא חייבים לרנדר הכול – אבל נרענן כדי שהצ׳קבוקסים יתבטלו
+      render();
+    });
+
+    function updateSelCount(){
+      selCountEl.textContent = `${selectedIds.size} נבחרו`;
+    }
+
+    /* ========== רנדר ==========
+       - מרענן KPI/גרף/כרטיסים
+       - משחזר מצב בחירה (selectedIds) בצ׳קבוקסים
+    ================================== */
+    function render(){
+      // ניקוי קטגוריות ריקות
+      Object.keys(categorized).forEach(k=>{
+        if (Array.isArray(categorized[k]) && categorized[k].length === 0) delete categorized[k];
+      });
+
+      // KPI
+      const totalCount = allItems.length;
+      const totalSum = allItems.reduce((s, it) => s + (it.amount || 0), 0);
+      const activeCats = Object.keys(categorized).length;
+      document.getElementById('kpi-count').textContent = totalCount || '0';
+      document.getElementById('kpi-sum').textContent = fmtMoney(totalSum);
+      document.getElementById('kpi-active').textContent = activeCats || '0';
+
+      // גרף
+      const catTotals = Object.entries(categorized).map(([k, arr]) => [k, arr.reduce((s,a)=>s+(a.amount||0),0)]);
+      catTotals.sort((a,b)=> b[1]-a[1]);
+      const maxVal = Math.max(1, ...catTotals.map(([_,v])=>v));
+      const bars = document.getElementById('bars');
+      bars.innerHTML = '';
+      catTotals.forEach(([k,v])=>{
+        const row = document.createElement('div'); row.className='bar';
+        const key = document.createElement('div'); key.className='key'; key.textContent = k;
+        const track=document.createElement('div'); track.className='track';
+        const fill=document.createElement('div'); fill.className='fill'; fill.style.width=(v/maxVal*100).toFixed(1)+'%';
+        const val=document.createElement('div'); val.className='val'; val.textContent=fmtMoney(v);
+        track.appendChild(fill); row.appendChild(key); row.appendChild(track); row.appendChild(val); bars.appendChild(row);
+      });
+
+      // פירוט
+      const wrap = document.getElementById('categories');
+      wrap.innerHTML = '';
+      Object.entries(categorized)
+        .sort((a,b)=> a[0].localeCompare(b[0],'he'))
+        .forEach(([cat, items])=>{
+          const sum = items.reduce((s,a)=>s+(a.amount||0),0);
+          const card = document.createElement('div'); card.className='category-card';
+          card.innerHTML = `
+            <div class="category-head">
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="chip">${cat}</span>
+                <span class="chip">סה״כ: <b>${fmtMoney(sum)}</b></span>
+                <span class="chip">עסקאות: ${items.length}</span>
+              </div>
+            </div>
+            <div class="items"></div>
+          `;
+          const itemsWrap = card.querySelector('.items');
+
+          items.forEach((it)=>{
+            const row = document.createElement('div'); row.className='item';
+            row.innerHTML = `
+              <div class="left">
+                <input type="checkbox" class="checkbox select-item" ${selectedIds.has(it.id)?'checked':''} />
+                <span class="dot"></span>
+                <span class="desc" title="${it.desc}">${it.desc}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="amt">${fmtMoney(it.amount)}</span>
+                <select aria-label="שינוי קטגוריה">
+                  ${allowedCategories.map(c => `<option value="${c}" ${c===it.category?'selected':''}>${c}</option>`).join('')}
+                </select>
+              </div>
+            `;
+
+            // שינוי יחידני
+            row.querySelector('select').addEventListener('change', (ev)=> {
+              changeCategorySingle(it.id, cat, ev.target.value);
+            });
+
+            // צ'קבוקס בחירה
+            const cb = row.querySelector('.select-item');
+            cb.addEventListener('change', (ev)=>{
+              if (ev.target.checked) selectedIds.add(it.id);
+              else selectedIds.delete(it.id);
+              updateSelCount();
+            });
+
+            itemsWrap.appendChild(row);
+          });
+
+          wrap.appendChild(card);
+        });
+
+      // עדכון כמות נבחרים
+      updateSelCount();
+
+      // לבנות מחדש את רשימת הקטגוריות ל-Bulk (למקרה שנוספו חדשות)
+      buildBulkSelectOptions();
+    }
+  </script>
+</body>
+</html>
